@@ -13,8 +13,8 @@ import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
- *
- * @author lenzstef
+ * This class stores all information from a HttpServletRequest
+ * and attaches an ID.
  */
 public class RequestData {
     
