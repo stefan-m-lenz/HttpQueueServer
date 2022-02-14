@@ -7,16 +7,13 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-@WebServlet(name = "RequestRelayServlet", urlPatterns = {"/"})
-public class RequestStoringServlet extends HttpServlet {
+/**
+ *
+ * @author lenzstef
+ */
+@WebServlet(name = "RequestProvidingServlet", urlPatterns = {"/pop-request"})
+public class RequestProvidingServlet extends HttpServlet {
 
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        
-        RequestManager.relayRequest(request, response);
-    }
-
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
     /**
      * Handles the HTTP <code>GET</code> method.
      *
@@ -28,7 +25,12 @@ public class RequestStoringServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+
+        response.setContentType("text/html");
+        RequestData requestData = RequestManager.popRequest();
+        if (requestData != null) {
+            response.getWriter().print(requestData.toString());
+        }
     }
 
     /**
@@ -42,7 +44,7 @@ public class RequestStoringServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+
     }
 
     /**

@@ -7,13 +7,16 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-/**
- *
- * @author lenzstef
- */
-@WebServlet(name = "RequestRelayServlet", urlPatterns = {"/request"})
+@WebServlet(name = "RequestRelayServlet", urlPatterns = {"/relay"})
 public class RequestRelayServlet extends HttpServlet {
 
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        
+        RequestManager.relayRequest(request, response);
+    }
+
+    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
     /**
      * Handles the HTTP <code>GET</code> method.
      *
@@ -25,12 +28,7 @@ public class RequestRelayServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
-        response.setContentType("text/html");
-        RequestData requestData = RequestManager.popRequest();
-        if (requestData != null) {
-            response.getWriter().print(requestData.toString());
-        }
+        processRequest(request, response);
     }
 
     /**
@@ -44,7 +42,7 @@ public class RequestRelayServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
+        processRequest(request, response);
     }
 
     /**
