@@ -25,6 +25,7 @@ public class RequestData {
     private final Map<String, List<String>> headers;
     private final String body;
     
+    
     private static String extractUri(HttpServletRequest request) {
         int contextPathChars = request.getContextPath().length() + 
                 request.getServletPath().length() + 1;
@@ -42,20 +43,11 @@ public class RequestData {
             queryString = "?" + queryString;
         }
         return uri + queryString;
-                
     }
     
-    public RequestData(HttpServletRequest request, int requestId) {
-        this.requestId = requestId;
-        
-        //store method (GET/POST etc.)
-        this.method = request.getMethod();
-                
-        // store uri
-        this.uri = extractUri(request);
-        
-        // store headers
-        this.headers = new HashMap<>();
+    
+    private static Map<String, List<String>> extractHeaders(HttpServletRequest request) {
+        HashMap<String, List<String>> headers = new HashMap<>();
         Enumeration<String> headerNames = request.getHeaderNames();
         if (headerNames != null) {
             while (headerNames.hasMoreElements()) {
@@ -70,10 +62,13 @@ public class RequestData {
                 }
             }
         }
-        
-        // store body
+        return headers;
+    }
+    
+    
+    private static String extractBody(HttpServletRequest request, String method) {
         String requestBody = "";
-        if ("POST".equals(this.method)) {
+        if ("POST".equals(method)) {
             try {
                 requestBody = request.getReader().lines()
                         .collect(Collectors.joining(System.lineSeparator()));
@@ -81,7 +76,16 @@ public class RequestData {
                 Logger.getLogger(RequestData.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        this.body = requestBody;
+        return requestBody;
+    }
+    
+    public RequestData(HttpServletRequest request, int requestId) {
+        this.requestId = requestId;
+        
+        this.method = request.getMethod();        
+        this.uri = extractUri(request);
+        this.headers = extractHeaders(request);
+        this.body = extractBody(request, this.method);
     }
     
     @Override
