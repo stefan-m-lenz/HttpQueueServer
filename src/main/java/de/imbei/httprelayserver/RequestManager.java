@@ -3,9 +3,12 @@ package de.imbei.httprelayserver;
 import java.util.LinkedList;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -58,7 +61,7 @@ public class RequestManager {
     /*
      *
      */
-    public static void relayRequest(HttpServletRequest request, HttpServletResponse response) throws InterruptedException {
+    public static void relayRequest(HttpServletRequest request, HttpServletResponse response) throws InterruptedException, IOException {
         int requestId = newRequestId();
         
         queueRequest(request, requestId);
@@ -89,8 +92,16 @@ public class RequestManager {
         responseConditions.remove(requestId);
     }
     
-    private static void writeResponse(HttpServletResponse response, ResponseData responseData) {
-        //TODO
+    private static void writeResponse(HttpServletResponse response, ResponseData responseData) throws IOException {
+        // set headers
+        for (Entry<String, List<String>> kv: responseData.getHeaders().entrySet()) {
+            for (String value : kv.getValue()) {
+                response.addHeader(kv.getKey(), value);
+            }
+        }
+        
+        //set body
+        response.getWriter().print(responseData.getBody());
     }
     
     public static RequestData popRequest() {
@@ -107,7 +118,8 @@ public class RequestManager {
     }
 
     
-    public static void registerResponse(int requestId, ResponseData responseData) {
+    public static void registerResponse(ResponseData responseData) {
+        int requestId = responseData.getRequestId();
         Lock responseLock = responseLocks.get(requestId);
         responseLock.lock();
         try {

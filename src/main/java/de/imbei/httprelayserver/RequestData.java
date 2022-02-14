@@ -66,9 +66,9 @@ public class RequestData {
     }
     
     
-    private static String extractBody(HttpServletRequest request, String method) {
+    public static String extractBody(HttpServletRequest request) {
         String requestBody = "";
-        if ("POST".equals(method)) {
+        if ("POST".equals(request.getMethod())) {
             try {
                 requestBody = request.getReader().lines()
                         .collect(Collectors.joining(System.lineSeparator()));
@@ -85,7 +85,7 @@ public class RequestData {
         this.method = request.getMethod();        
         this.uri = extractUri(request);
         this.headers = extractHeaders(request);
-        this.body = extractBody(request, this.method);
+        this.body = extractBody(request);
     }
     
     @Override

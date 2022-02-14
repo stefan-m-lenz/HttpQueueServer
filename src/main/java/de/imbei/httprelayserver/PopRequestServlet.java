@@ -11,8 +11,8 @@ import jakarta.servlet.http.HttpServletResponse;
  *
  * @author lenzstef
  */
-@WebServlet(name = "RequestProvidingServlet", urlPatterns = {"/pop-request"})
-public class RequestProvidingServlet extends HttpServlet {
+@WebServlet(name = "PopRequestServlet", urlPatterns = {"/pop-request"})
+public class PopRequestServlet extends HttpServlet {
 
     /**
      * Handles the HTTP <code>GET</code> method.
