@@ -2,7 +2,7 @@
 <web-app version="3.1" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd">
     <servlet>
         <servlet-name>RequestRelayServlet</servlet-name>
-        <servlet-class>de.imbei.relayserver.RequestRelayServlet</servlet-class>
+        <servlet-class>de.imbei.httprelayserver.RequestRelayServlet</servlet-class>
     </servlet>
     <servlet-mapping>
         <servlet-name>RequestRelayServlet</servlet-name>
@@ -10,11 +10,19 @@
     </servlet-mapping>
     <servlet>
         <servlet-name>RequestProvidingServlet</servlet-name>
-        <servlet-class>de.imbei.relayserver.RequestProvidingServlet</servlet-class>
+        <servlet-class>de.imbei.httprelayserver.RequestProvidingServlet</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>ResponseServlet</servlet-name>
+        <servlet-class>de.imbei.httprelayserver.ResponseServlet</servlet-class>
     </servlet>
     <servlet-mapping>
         <servlet-name>RequestProvidingServlet</servlet-name>
         <url-pattern>/pop-request</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>ResponseServlet</servlet-name>
+        <url-pattern>/response/*</url-pattern>
     </servlet-mapping>
     <session-config>
         <session-timeout>

@@ -1,4 +1,4 @@
-package de.imbei.relayserver;
+package de.imbei.httprelayserver;
 
 import java.util.LinkedList;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,7 +50,7 @@ public class RequestManager {
                 requestCounter = 0; // overflow, use only positive values
             }
         } finally {
-            requestQueueLock.unlock();
+            requestCounterLock.unlock();
         }
         return requestCounter;
     }

@@ -1,4 +1,4 @@
-package de.imbei.relayserver;
+package de.imbei.httprelayserver;
 
 import java.io.IOException;
 import jakarta.servlet.ServletException;
@@ -6,14 +6,23 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-/**
- *
- * @author lenzstef
- */
-@WebServlet(name = "RequestProvidingServlet", urlPatterns = {"/pop-request"})
-public class RequestProvidingServlet extends HttpServlet {
+@WebServlet(name = "RequestRelayServlet", urlPatterns = {"/relay"})
+public class RequestRelayServlet extends HttpServlet {
 
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        
+        try {
+            RequestManager.relayRequest(request, response);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(RequestRelayServlet.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
     /**
      * Handles the HTTP <code>GET</code> method.
      *
@@ -25,12 +34,7 @@ public class RequestProvidingServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
-        response.setContentType("text/html");
-        RequestData requestData = RequestManager.popRequest();
-        if (requestData != null) {
-            response.getWriter().print(requestData.toString());
-        }
+        processRequest(request, response);
     }
 
     /**
@@ -44,7 +48,7 @@ public class RequestProvidingServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
+        processRequest(request, response);
     }
 
     /**
@@ -54,7 +58,7 @@ public class RequestProvidingServlet extends HttpServlet {
      */
     @Override
     public String getServletInfo() {
-        return "Short description";
+        return "Relay HTTP requests for polling";
     }// </editor-fold>
 
 }
