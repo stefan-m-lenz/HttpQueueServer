@@ -6,7 +6,7 @@
     </servlet>
     <servlet-mapping>
         <servlet-name>RequestRelayServlet</servlet-name>
-        <url-pattern>/relay</url-pattern>
+        <url-pattern>/relay/*</url-pattern>
     </servlet-mapping>
     <servlet>
         <servlet-name>RequestProvidingServlet</servlet-name>

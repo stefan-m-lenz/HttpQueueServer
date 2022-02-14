@@ -1,6 +1,7 @@
 package de.imbei.relayserver;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -24,6 +25,26 @@ public class RequestData {
     private final Map<String, List<String>> headers;
     private final String body;
     
+    private static String extractUri(HttpServletRequest request) {
+        int contextPathChars = request.getContextPath().length() + 
+                request.getServletPath().length() + 1;
+        String uri = request.getRequestURI();
+        if (uri.length() < contextPathChars) {
+            uri = ""; // request to /relay without / at the end
+        } else {
+            uri = uri.substring(contextPathChars);
+        }
+        String queryString = request.getQueryString();
+        if (queryString == null) {
+            queryString = "";
+        }
+        else {
+            queryString = "?" + queryString;
+        }
+        return uri + queryString;
+                
+    }
+    
     public RequestData(HttpServletRequest request, int requestId) {
         this.requestId = requestId;
         
@@ -31,7 +52,7 @@ public class RequestData {
         this.method = request.getMethod();
                 
         // store uri
-        this.uri = request.getPathInfo();
+        this.uri = extractUri(request);
         
         // store headers
         this.headers = new HashMap<>();
@@ -65,7 +86,7 @@ public class RequestData {
     
     @Override
     public String toString() {
-        Gson gson = new Gson();
+        Gson gson = new GsonBuilder().disableHtmlEscaping().create();
         return gson.toJson(this);
     }
     
