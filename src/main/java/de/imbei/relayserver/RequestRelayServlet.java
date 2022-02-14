@@ -6,6 +6,8 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @WebServlet(name = "RequestRelayServlet", urlPatterns = {"/relay"})
 public class RequestRelayServlet extends HttpServlet {
@@ -13,7 +15,11 @@ public class RequestRelayServlet extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         
-        RequestManager.relayRequest(request, response);
+        try {
+            RequestManager.relayRequest(request, response);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(RequestRelayServlet.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
@@ -52,7 +58,7 @@ public class RequestRelayServlet extends HttpServlet {
      */
     @Override
     public String getServletInfo() {
-        return "Short description";
+        return "Relay HTTP requests for polling";
     }// </editor-fold>
 
 }
