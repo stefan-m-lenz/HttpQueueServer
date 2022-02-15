@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -28,7 +29,8 @@ public class RequestManager {
     
     //make requestQueue thread safe
     private static final Lock requestQueueLock = new ReentrantLock();
-   
+    // let the polling module wait for this condition:
+    private static final Condition requestArrived = requestQueueLock.newCondition();
     
     // make it possible to wait for a response and be notified upon arrival
     private static final Map<Integer, Lock> responseLocks = Collections.synchronizedMap(new HashMap<>());
@@ -39,7 +41,8 @@ public class RequestManager {
     private static void queueRequest(HttpServletRequest request, int requestId) {
         requestQueueLock.lock();
         try {
-            requestQueue.add(new RequestData(request, requestId));    
+            requestQueue.add(new RequestData(request, requestId));
+            requestArrived.signal();
         } finally {
             requestQueueLock.unlock();
         }
@@ -106,9 +109,18 @@ public class RequestManager {
         response.getWriter().print(responseData.getBody());
     }
     
-    public static RequestData popRequest() {
+    // Get new request. Wait until waitinTime is over or until a new request arrives
+    public static RequestData popRequest(int waitingTime) throws InterruptedException {
         requestQueueLock.lock();
         try {
+            long timeStart = System.currentTimeMillis();
+            while (requestQueue.isEmpty()) {
+                requestArrived.await(waitingTime, TimeUnit.SECONDS);
+                long elapsedMillis = System.currentTimeMillis() - timeStart;
+                if (elapsedMillis > waitingTime * 1000) {
+                    break;
+                }
+            }
             if (requestQueue.isEmpty()) {
                 return null;
             } else {

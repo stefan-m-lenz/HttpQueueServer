@@ -6,6 +6,8 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -14,22 +16,25 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet(name = "PopRequestServlet", urlPatterns = {"/pop-request"})
 public class PopRequestServlet extends HttpServlet {
 
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
+    
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         response.setContentType("text/html");
-        RequestData requestData = RequestManager.popRequest();
-        if (requestData != null) {
+        String waitingTimeParam = request.getParameter("w");
+        int waitingTime;
+        if (waitingTimeParam == null) {
+            waitingTime = 10;
+        } else{
+            waitingTime = Integer.parseInt(waitingTimeParam);
+        }
+        
+        try {
+            RequestData requestData = RequestManager.popRequest(waitingTime);
             response.getWriter().print(requestData.toString());
+        } catch (InterruptedException ex) {
+            Logger.getLogger(PopRequestServlet.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
