@@ -16,9 +16,8 @@ import java.util.logging.Logger;
 @WebServlet(name = "PopRequestServlet", urlPatterns = {"/pop-request"})
 public class PopRequestServlet extends HttpServlet {
 
-    
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         response.setContentType("text/html");
@@ -36,20 +35,6 @@ public class PopRequestServlet extends HttpServlet {
         } catch (InterruptedException ex) {
             Logger.getLogger(PopRequestServlet.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }
-
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-
     }
 
     /**
