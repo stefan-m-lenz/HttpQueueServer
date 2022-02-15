@@ -93,6 +93,8 @@ public class RequestManager {
     }
     
     private static void writeResponse(HttpServletResponse response, ResponseData responseData) throws IOException {
+        response.setStatus(responseData.getStatusCode());
+        
         // set headers
         for (Entry<String, List<String>> kv: responseData.getHeaders().entrySet()) {
             for (String value : kv.getValue()) {

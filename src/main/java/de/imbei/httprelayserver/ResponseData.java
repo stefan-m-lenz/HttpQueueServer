@@ -12,8 +12,9 @@ import java.util.Map;
  * @author lenzstef
  */
 public class ResponseData {
-    //TODO status
+    
     private int requestId;
+    private int statusCode;
     private Map<String, List<String>> headers;
     private String body;
 
@@ -39,6 +40,14 @@ public class ResponseData {
 
     public void setBody(String body) {
         this.body = body;
+    }
+    
+    public int getStatusCode() {
+        return statusCode;
+    }
+
+    public void setStatusCode(int statusCode) {
+        this.statusCode = statusCode;
     }
 
 }
