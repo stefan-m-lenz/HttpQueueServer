@@ -31,7 +31,9 @@ public class PopRequestServlet extends HttpServlet {
         
         try {
             RequestData requestData = RequestManager.popRequest(waitingTime);
-            response.getWriter().print(requestData.toString());
+            if (requestData != null) {
+                response.getWriter().print(requestData.toString());
+            }
         } catch (InterruptedException ex) {
             Logger.getLogger(PopRequestServlet.class.getName()).log(Level.SEVERE, null, ex);
         }
