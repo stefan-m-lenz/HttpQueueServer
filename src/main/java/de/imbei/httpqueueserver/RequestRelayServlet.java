@@ -1,4 +1,4 @@
-package de.imbei.httprelayserver;
+package de.imbei.httpqueueserver;
 
 import java.io.IOException;
 import jakarta.servlet.ServletException;
@@ -49,7 +49,7 @@ public class RequestRelayServlet extends HttpServlet {
      */
     @Override
     public String getServletInfo() {
-        return "Relay HTTP requests for polling";
+        return "Relay HTTP requests via polling";
     }// </editor-fold>
 
 }

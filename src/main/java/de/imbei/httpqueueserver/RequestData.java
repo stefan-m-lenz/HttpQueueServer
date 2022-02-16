@@ -1,4 +1,4 @@
-package de.imbei.httprelayserver;
+package de.imbei.httpqueueserver;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

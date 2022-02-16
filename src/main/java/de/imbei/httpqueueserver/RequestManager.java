@@ -1,4 +1,4 @@
-package de.imbei.httprelayserver;
+package de.imbei.httpqueueserver;
 
 import java.util.LinkedList;
 import jakarta.servlet.http.HttpServletRequest;

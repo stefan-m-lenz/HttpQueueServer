@@ -3,11 +3,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>de.imbei</groupId>
-    <artifactId>HttpRelayServer</artifactId>
+    <artifactId>HttpQueueServer</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>war</packaging>
 
-    <name>HttpRelayServer</name>
+    <name>HttpQueueServer</name>
 
     <properties>
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>

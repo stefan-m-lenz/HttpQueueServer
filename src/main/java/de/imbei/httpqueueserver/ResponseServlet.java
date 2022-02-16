@@ -1,4 +1,4 @@
-package de.imbei.httprelayserver;
+package de.imbei.httpqueueserver;
 
 import com.google.gson.Gson;
 import java.io.IOException;
