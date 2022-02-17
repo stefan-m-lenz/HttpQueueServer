@@ -8,8 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- *
- * @author lenzstef
+ * Encapsulates the data from the response of the target server plus the request ID.
  */
 public class ResponseData {
     

@@ -8,8 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- *
- * @author lenzstef
+ * The /response endpoint accepts the answers for requests.
  */
 public class ResponseServlet extends HttpServlet {
 

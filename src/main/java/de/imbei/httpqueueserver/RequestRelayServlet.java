@@ -9,6 +9,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Relayss requests to the target server.
+ * Requests of the form /relay/abc/xyz?u=123 are translated to requests like
+ * http://the-target-server-url/abc/xyz?u=123 and the answer is returned as
+ * answer of this servlet.
+ * This way, the response looks like it is coming from the target server.
+ */
 @WebServlet(name = "RequestRelayServlet", urlPatterns = {"/relay"})
 public class RequestRelayServlet extends HttpServlet {
 

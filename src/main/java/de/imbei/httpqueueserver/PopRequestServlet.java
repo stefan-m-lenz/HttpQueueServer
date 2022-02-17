@@ -10,8 +10,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
- * @author lenzstef
+ * Provides the queue of relay requests to the polling module.
+ * A POST to /pop-request will return the relay request, packaged as JSON.
+ * The query parameter "w" specifies the time, that the request is delayed if 
+ * there is no request in the queue.
  */
 @WebServlet(name = "PopRequestServlet", urlPatterns = {"/pop-request"})
 public class PopRequestServlet extends HttpServlet {
@@ -24,7 +26,7 @@ public class PopRequestServlet extends HttpServlet {
         String waitingTimeParam = request.getParameter("w");
         int waitingTime;
         if (waitingTimeParam == null) {
-            waitingTime = 10;
+            waitingTime = 30;
         } else{
             waitingTime = Integer.parseInt(waitingTimeParam);
         }

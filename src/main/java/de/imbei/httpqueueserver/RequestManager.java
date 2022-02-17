@@ -15,8 +15,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- *
- * @author lenzstef
+ * Manages the request queue and the incoming responses.
  */
 public class RequestManager {
     
@@ -61,9 +60,7 @@ public class RequestManager {
         return requestCounter;
     }
     
-    /*
-     *
-     */
+    
     public static void relayRequest(HttpServletRequest request, HttpServletResponse response) throws InterruptedException, IOException {
         int requestId = newRequestId();
         
@@ -109,7 +106,7 @@ public class RequestManager {
         response.getWriter().print(responseData.getBody());
     }
     
-    // Get new request. Wait until waitinTime is over or until a new request arrives
+    // Get new request. Wait until waitingTime is over or until a new request arrives
     public static RequestData popRequest(int waitingTime) throws InterruptedException {
         requestQueueLock.lock();
         try {
