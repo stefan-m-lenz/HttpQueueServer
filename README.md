@@ -1,6 +1,6 @@
 # HttpQueueServer
 
-The functionality and purpose of this Java web server can be seen in the following diagram:
+The functionality and purpose of this Java web server application can be seen in the following diagram:
 
 ![](overview.png)
 
