@@ -4,6 +4,7 @@ import java.util.LinkedList;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -103,7 +104,8 @@ public class RequestManager {
         }
         
         //set body
-        response.getWriter().print(responseData.getBody());
+        byte[] body = Base64.getDecoder().decode(responseData.getBody());
+        response.getOutputStream().write(body);
     }
     
     // Get new request. Wait until waitingTime is over or until a new request arrives
