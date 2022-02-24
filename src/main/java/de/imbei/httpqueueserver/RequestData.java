@@ -66,7 +66,7 @@ public class RequestData {
 
     public static String extractBody(HttpServletRequest request) {
         String requestBody = "";
-        if ("POST".equals(request.getMethod())) {
+        if ("POST".equals(request.getMethod()) || "PUT".equals(request.getMethod())) {
             try {
                 requestBody = request.getReader().lines()
                         .collect(Collectors.joining(System.lineSeparator()));
