@@ -41,7 +41,7 @@ Otherwise, users could intercept other users' requests.
 Concretely, the reverse proxy configuration is supposed to do something like the following:
 
 * Redirect https://queue.example.com/* to http://localhost:8080/HttpQueueServer/relay/*.
-* Restrict the access to https://queue.example.com:8443/HttpQueueServer/pop-request to the IP address of the server running the polling module and redirect requests to https://queue.example.com:8443/pop-request to http://localhost:8080/HttpQueueServer/pop-request.
+* Restrict the access to https://queue.example.com:8443/pop-request to the IP address of the server running the polling module and redirect requests to https://queue.example.com:8443/pop-request to http://localhost:8080/HttpQueueServer/pop-request.
 * Restrict the access to https://queue.example.com:8443/response to the IP address of the server running the polling module and redirect requests to https://queue.example.com:8443/response to http://localhost:8080/HttpQueueServer/response.
 
 ```bash
