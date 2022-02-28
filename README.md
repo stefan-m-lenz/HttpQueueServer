@@ -32,7 +32,7 @@ sudo mv HttpQueueServer.war /var/lib/tomcat9/webapps
 
 For a use in production, it is necessary to install and configure a reverse proxy.
 
-## Install and configure *nginx* as reverse proxy
+## Install and configure *Nginx* as reverse proxy
 Assuming the base URL of the queue server is https://queue.example.com,
 the reverse proxy configuration makes it possible that answers from requests to URLs like https://queue.example.com/abc/xyz?v=123 are basically the same as when directly querying the target server via https://target.example.com/abc/xyz?v=123.
 Secondly, the reverse proxy configuration must ensure that the server endpoints `/pop-request` and `/response` are only accessible by the (server running) the polling module.
@@ -44,11 +44,59 @@ Concretely, the reverse proxy configuration is supposed to do something like the
 * Restrict the access to https://queue.example.com:8443/pop-request to the IP address of the server running the polling module and redirect requests to https://queue.example.com:8443/pop-request to http://localhost:8080/HttpQueueServer/pop-request.
 * Restrict the access to https://queue.example.com:8443/response to the IP address of the server running the polling module and redirect requests to https://queue.example.com:8443/response to http://localhost:8080/HttpQueueServer/response.
 
+Nginx can be installed and configured via the following commands:
 ```bash
-TODO
+# Install nginx
+sudo apt-get install nginx
+
+# Edit the nginx configuration
+sudo vi /etc/nginx/nginx.conf
 ```
 
-Finally, ensure that the firewall allows access to port 443, e.g. via:
-```bash
-ufw allow 443/tcp
+Two servers need to be added to the `http` element of the Nginx configuration.
+A minimal `nginx.conf` configuration file looks like this:
+
 ```
+events {
+}
+http {
+   server {
+      listen 443 ssl;
+
+      ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
+      ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
+
+      location / {
+         proxy_pass http://localhost:8080/HttpQueueServer/relay/;
+      }
+   }
+
+   server {
+      listen 8443 ssl;
+
+      ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
+      ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
+
+      location /pop-request {
+         allow <POLLING_MODULE_SERVER_IP>;
+         deny all;
+         proxy_pass http://localhost:8080/HttpQueueServer/pop-request;
+      }
+
+      location /response {
+         allow <POLLING_MODULE_SERVER_IP>;
+         deny all;
+         proxy_pass http://localhost:8080/HttpQueueServer/response;
+      }
+   }
+}
+```
+
+Notes:
+* Replace `<POLLING_MODULE_SERVER_IP>` with the IP adress of the server that runs the polling module.
+* This configuration uses a self-signed certificate that was generated with the command `sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt`. For a production deployment, a valid certificate should be provided.
+
+# Firewall configuration
+
+If the communication between queue server and polling module works, finally ensure that the firewall blocks access to port 8080 to prevent that the queue can be accessed by users.
+The firewall must allow access to port 443 for all users.
