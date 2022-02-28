@@ -15,13 +15,14 @@ For security reasons it must be ensured via firewall and/or reverse proxy config
 The `HttpQueueServer` is a Java web application based on the Java/Jakarte EE 8 standard.
 It can be deployed in a [Tomcat 9 web server](https://tomcat.apache.org/) or any other servlet container that supports the Java Servlet Specification 4.0.
 
-The following script shows how the `HttpQueueServer` can be installed on an Ubuntu 18 server:
+The following script shows how the `HttpQueueServer` can be installed on an Ubuntu 18.04 server:
 
 ```bash
 # Install Tomcat 9
 sudo apt-get install tomcat9
 
 # Run Tomcat as a service that will always start when the system boots up
+sudo systemctl start tomcat9
 sudo systemctl enable tomcat9
 
 # Download the HttpQueueServer web archive file and deploy it on Tomcat
@@ -47,7 +48,7 @@ Concretely, the reverse proxy configuration is supposed to do something like the
 TODO
 ```
 
-Finally, ensure that the firewall allows access to port 443:
+Finally, ensure that the firewall allows access to port 443, e.g. via:
 ```bash
 ufw allow 443/tcp
 ```
