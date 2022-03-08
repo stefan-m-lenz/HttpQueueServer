@@ -36,24 +36,64 @@ For a use in production, it is necessary to install and configure a reverse prox
 Assuming the base URL of the queue server is https://queue.example.com,
 the reverse proxy configuration makes it possible that answers from requests to URLs like https://queue.example.com/abc/xyz?v=123 are basically the same as when directly querying the target server via https://target.example.com/abc/xyz?v=123.
 Secondly, the reverse proxy configuration must ensure that the server endpoints `/pop-request` and `/response` are only accessible by the (server running) the polling module.
-Otherwise, users could intercept other users' requests.
+Otherwise, users could potentially intercept other users' requests.
 
 Concretely, the reverse proxy configuration is supposed to do something like the following:
 
-* Redirect https://queue.example.com/* to http://localhost:8080/HttpQueueServer/relay/*.
-* Restrict the access to https://queue.example.com:8443/pop-request to the IP address of the server running the polling module and redirect requests to https://queue.example.com:8443/pop-request to http://localhost:8080/HttpQueueServer/pop-request.
-* Restrict the access to https://queue.example.com:8443/response to the IP address of the server running the polling module and redirect requests to https://queue.example.com:8443/response to http://localhost:8080/HttpQueueServer/response.
+* Redirect https://queue.example.com/relay/* to http://localhost:8080/HttpQueueServer/relay/*.
+* Restrict the access to https://queue.example.com/pop-request to the polling module and redirect requests to https://queue.example.com/pop-request to http://localhost:8080/HttpQueueServer/pop-request.
+* Restrict the access to https://queue.example.com/response to the polling module and redirect requests to https://queue.example.com/response to http://localhost:8080/HttpQueueServer/response.
+
 
 Nginx can be installed and configured via the following commands:
 ```bash
-# Install nginx
 sudo apt-get install nginx
+```
 
-# Edit the nginx configuration
+One possibility of restricting the endpoints `/pop-request` and `/response` is to allow only the server that runs the polling module to access these requests.
+This can be achived by restricting the endpoints to the IP of the server running the polling module.
+If the server running the polling module is behind a proxy and the IP address cannot be used to secure the access to the endpoints `/pop-request` and `/response`, it is necessary to secure these endpoints via client certificates.
+The necessary steps are shown in the following.
+To generate and deploy client certificates, run the following commands:
+
+```bash
+# Create a certificate authority (key)
+openssl genrsa -des3 -out ca.key 4096
+
+# Sign a server side certificate used for client-side authentication
+openssl req -new -x509 -days 365 -key ca.key -out ca.crt
+
+# Create the key for the polling module
+openssl genrsa -des3 -out polling.key 4096
+
+# Create certificate signing request
+openssl req -new -key polling.key -out polling.csr
+
+# Sign the certificate signing request with the certificate authority
+openssl x509 -req -days 365 -in polling.csr -CA ca.crt -CAkey ca.key -set_serial 01 -out polling.crt
+
+# Create the client side certificate key for the polling module
+# Important: use a different organization name than in the certificate authority
+# (otherwise Nginx gives an error: https://stackoverflow.com/a/47115211/3180809)
+openssl pkcs12 -export -out polling.pfx -inkey polling.key -in polling.crt -certfile ca.crt
+
+# Clean up files that are not needed any more
+rm polling.csr polling.crt polling.key
+
+# Move the server certificate authority files to the folder with the Nginx configuration files
+sudo mv ca.crt ca.key /etc/nginx/conf.d
+```
+
+The file `polling.pfx` must be transferred to the server where the polling module runs.
+It serves as a key for the client authentication.
+For the configuration in the polling module, see the configuration property `queueClientAuthCert`.
+
+Open an editor to configure Nginx:
+
+```bash
 sudo vi /etc/nginx/nginx.conf
 ```
 
-Two servers need to be added to the `http` element of the Nginx configuration.
 A minimal `nginx.conf` configuration file looks like this:
 
 ```
@@ -63,38 +103,37 @@ http {
    server {
       listen 443 ssl;
 
+      # Server certificate, shown to user
       ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
       ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
 
-      location / {
+      # Client side authentication, only for polling module
+      ssl_client_certificate /etc/nginx/conf.d/ca.crt;
+      ssl_verify_client optional;
+
+      location /relay/ {
          proxy_pass http://localhost:8080/HttpQueueServer/relay/;
       }
-   }
-
-   server {
-      listen 8443 ssl;
-
-      ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
-      ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
 
       location /pop-request {
-         allow <POLLING_MODULE_SERVER_IP>;
-         deny all;
+         if ($ssl_client_verify != SUCCESS) {
+            return 403;
+         }
          proxy_pass http://localhost:8080/HttpQueueServer/pop-request;
       }
 
       location /response {
-         allow <POLLING_MODULE_SERVER_IP>;
-         deny all;
+         if ($ssl_client_verify != SUCCESS) {
+            return 403;
+         }
          proxy_pass http://localhost:8080/HttpQueueServer/response;
       }
    }
 }
 ```
 
-Notes:
-* Replace `<POLLING_MODULE_SERVER_IP>` with the IP adress of the server that runs the polling module.
-* This configuration uses a self-signed certificate that was generated with the command `sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt`. For a production deployment, a valid certificate should be provided.
+The self-signed server certificate `/etc/ssl/certs/nginx-selfsigned.crt` was generated with the command `sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt`.
+For a production deployment, a valid certificate should be provided instead.
 
 # Firewall configuration
 
