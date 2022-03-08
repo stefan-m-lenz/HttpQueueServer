@@ -85,7 +85,7 @@ sudo mv ca.crt ca.key /etc/nginx/conf.d
 
 The file `polling.pfx` must be transferred to the server where the polling module runs.
 It serves as a key for the client authentication.
-For the configuration in the polling module, see the configuration property `queueClientAuthCert`.
+For the configuration in the polling module, see the configuration property `queueClientAuthCert` in the [description of the polling module](https://github.com/stefan-m-lenz/HttpPollingModule).
 
 Open an editor to configure Nginx:
 
