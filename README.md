@@ -33,12 +33,11 @@ sudo mv HttpQueueServer.war /var/lib/tomcat9/webapps
 For a use in production, it is necessary to install and configure a reverse proxy.
 
 ## Install and configure *Nginx* as reverse proxy
-Assuming the base URL of the queue server is https://queue.example.com,
-the reverse proxy configuration makes it possible that answers from requests to URLs like https://queue.example.com/abc/xyz?v=123 are basically the same as when directly querying the target server via https://target.example.com/abc/xyz?v=123.
+Setting up a reverse proxy for the queue server allows to enable communication via HTTPS.
 Secondly, the reverse proxy configuration must ensure that the server endpoints `/pop-request` and `/response` are only accessible by the (server running) the polling module.
 Otherwise, users could potentially intercept other users' requests.
 
-Concretely, the reverse proxy configuration is supposed to do something like the following:
+Assuming the base URL of the queue server is https://queue.example.com, the reverse proxy configuration is supposed to do something like the following:
 
 * Redirect https://queue.example.com/relay/* to http://localhost:8080/HttpQueueServer/relay/*.
 * Restrict the access to https://queue.example.com/pop-request to the polling module and redirect requests to https://queue.example.com/pop-request to http://localhost:8080/HttpQueueServer/pop-request.
