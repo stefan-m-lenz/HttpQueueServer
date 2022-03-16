@@ -8,6 +8,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -19,12 +20,28 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class RequestData {
 
+    /**
+     * These HTTP headers cannot be set in the HttpClient. They can be ignored
+     * when assembling the request data. The values are extracted from:
+     * https://github.com/openjdk/jdk/blob/47b1c51bbd28582d209db07052e553a76acced65/src/java.net.http/share/classes/jdk/internal/net/http/common/Utils.java#L136
+     */
+    private static final Set<String> RESTRICTED_HEADERS
+            = Set.of("connection", "content-length", "expect", "host", "upgrade");
+    
     private final int requestId;
     private final String method;
     private final String uri;
     private final Map<String, List<String>> headers;
     private final String body;
 
+    /**
+     * Extracts "abc/xyz?v=2" from a request to
+     * "https://queue.example.com/relay/abc/xyz?v=2".
+     *
+     * @param request the original request
+     * @return the extracted part of the URI that is to be passed to the polling
+     * module
+     */
     private static String extractUri(HttpServletRequest request) {
         int contextPathChars = request.getContextPath().length()
                 + request.getServletPath().length() + 1;
@@ -49,7 +66,7 @@ public class RequestData {
         if (headerNames != null) {
             while (headerNames.hasMoreElements()) {
                 String nextHeaderName = headerNames.nextElement();
-                if (!"host".equals(nextHeaderName) && !"connection".equals(nextHeaderName)) {
+                if (!RESTRICTED_HEADERS.contains(nextHeaderName)) {
                     List<String> nextHeaderValue = headers.get(nextHeaderName);
                     if (nextHeaderValue == null) {
                         nextHeaderValue = new ArrayList<>();
