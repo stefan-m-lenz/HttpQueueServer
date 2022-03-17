@@ -26,7 +26,7 @@ sudo systemctl start tomcat9
 sudo systemctl enable tomcat9
 
 # Download the HttpQueueServer web archive file and deploy it on Tomcat
-wget https://github.com/stefan-m-lenz/HttpQueueServer/releases/download/v1.0/HttpQueueServer.war
+wget https://github.com/stefan-m-lenz/HttpQueueServer/releases/download/v1.0.1/HttpQueueServer.war
 sudo mv HttpQueueServer.war /var/lib/tomcat9/webapps
 ```
 
