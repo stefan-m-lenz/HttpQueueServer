@@ -134,7 +134,7 @@ http {
 The self-signed server certificate `/etc/ssl/certs/nginx-selfsigned.crt` was generated with the command `sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt`.
 For a production deployment, a valid certificate should be provided instead.
 
-# Firewall configuration
+## Firewall configuration
 
 If the communication between queue server and polling module works, finally ensure that the firewall blocks access to port 8080 to prevent that the queue can be accessed by users.
 The firewall must allow access to port 443 for all users.
