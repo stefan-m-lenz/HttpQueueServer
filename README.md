@@ -30,6 +30,10 @@ wget https://github.com/stefan-m-lenz/HttpQueueServer/releases/download/v1.0.1/H
 sudo mv HttpQueueServer.war /var/lib/tomcat9/webapps
 ```
 
+Ater the deployment of the `HttpQueueServer` on Tomcat, the server is running and available via the URL http://localhost:8080/HttpQueueServer/.
+Opening this URL in the browser shows a short information about the server.
+The endpoints `/relay`, `/pop-request` and `/response` are available via http://localhost:8080/HttpQueueServer/relay, http://localhost:8080/HttpQueueServer/pop-request and http://localhost:8080/HttpQueueServer/response.
+
 For a use in production, it is necessary to install and configure a reverse proxy.
 
 ## Install and configure *Nginx* as reverse proxy
