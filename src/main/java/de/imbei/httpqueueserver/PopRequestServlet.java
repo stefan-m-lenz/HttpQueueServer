@@ -17,6 +17,8 @@ import java.util.logging.Logger;
  */
 @WebServlet(name = "PopRequestServlet", urlPatterns = {"/pop-request"})
 public class PopRequestServlet extends HttpServlet {
+    
+    private RequestManager requestManger = RequestManager.getInstance();
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -32,7 +34,7 @@ public class PopRequestServlet extends HttpServlet {
         }
         
         try {
-            RequestData requestData = RequestManager.popRequest(waitingTime);
+            RequestData requestData = requestManger.popRequest(waitingTime);
             if (requestData != null) {
                 response.getWriter().print(requestData.toString());
             }
@@ -48,7 +50,7 @@ public class PopRequestServlet extends HttpServlet {
      */
     @Override
     public String getServletInfo() {
-        return "Short description";
+        return "Returns new requests from the queue";
     }// </editor-fold>
 
 }

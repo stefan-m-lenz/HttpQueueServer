@@ -19,26 +19,50 @@ import java.util.concurrent.locks.ReentrantLock;
  * Manages the request queue and the incoming responses.
  */
 public class RequestManager {
-    
-    private static int requestCounter = 0;
-    private static final LinkedList<RequestData> requestQueue = new LinkedList<>();
-    private static final Map<Integer, ResponseData> responses = Collections.synchronizedMap(new HashMap<>());
-    
+       
+    private int requestCounter = 0;
+    private final LinkedList<RequestData> requestQueue = new LinkedList<>();
+    private final Map<Integer, ResponseData> responses = Collections.synchronizedMap(new HashMap<>());
+      
     // make requestCounter thread safe
-    private static final Lock requestCounterLock = new ReentrantLock();
+    private final Lock requestCounterLock = new ReentrantLock();
     
-    //make requestQueue thread safe
-    private static final Lock requestQueueLock = new ReentrantLock();
+    // make requestQueue thread safe
+    private final Lock requestQueueLock = new ReentrantLock();
     // let the polling module wait for this condition:
-    private static final Condition requestArrived = requestQueueLock.newCondition();
+    private final Condition requestArrived = requestQueueLock.newCondition();
     
     // make it possible to wait for a response and be notified upon arrival
-    private static final Map<Integer, Lock> responseLocks = Collections.synchronizedMap(new HashMap<>());
-    private static final Map<Integer, Condition> responseConditions = Collections.synchronizedMap(new HashMap<>());
-            
+    private final Map<Integer, Lock> responseLocks = Collections.synchronizedMap(new HashMap<>());
+    private final Map<Integer, Condition> responseConditions = Collections.synchronizedMap(new HashMap<>());
+    
+    // The time of each request is stored until the response has been delivered.
+    // This way, a clean-up task can remove requests that have timed out,
+    // as well as corresponding responses that may never be fetched
+    // because the request has timed out already.
+    private final LinkedList<RequestTime> requestTimes = new LinkedList<>();
+    
+    // make requestTimes thread safe
+    private final Lock requestTimesLock = new ReentrantLock();
+
+    // This class follows the singleton pattern
+    private static volatile RequestManager instance;
+    
+    private RequestManager() {}
+
+    public static RequestManager getInstance() {
+        if (instance == null) {
+            synchronized (RequestManager.class) {
+                if (instance == null) {
+                    instance = new RequestManager();
+                }
+            }
+        }
+        return instance;
+    }
 
     
-    private static void queueRequest(HttpServletRequest request, int requestId) {
+    private void queueRequest(HttpServletRequest request, int requestId) {
         requestQueueLock.lock();
         try {
             requestQueue.add(new RequestData(request, requestId));
@@ -48,7 +72,7 @@ public class RequestManager {
         }
     }
     
-    private static int newRequestId() {
+    private int newRequestId() {
         requestCounterLock.lock();
         try {
             requestCounter += 1;
@@ -62,7 +86,7 @@ public class RequestManager {
     }
     
     
-    public static void relayRequest(HttpServletRequest request, HttpServletResponse response) throws InterruptedException, IOException {
+    public void relayRequest(HttpServletRequest request, HttpServletResponse response) throws InterruptedException, IOException {
         int requestId = newRequestId();
         
         queueRequest(request, requestId);
@@ -73,7 +97,7 @@ public class RequestManager {
         writeResponse(response, responseData);
     }
     
-    private static ResponseData waitForResponse(int requestId) throws InterruptedException {
+    private ResponseData waitForResponse(int requestId) throws InterruptedException {
         ReentrantLock lock = new ReentrantLock();
         responseLocks.put(requestId, lock);
         lock.lock();
@@ -96,7 +120,7 @@ public class RequestManager {
         }
     }
     
-    private static void writeResponse(HttpServletResponse response, ResponseData responseData) throws IOException {
+    private void writeResponse(HttpServletResponse response, ResponseData responseData) throws IOException {
         response.setStatus(responseData.getStatusCode());
         
         // set headers
@@ -112,7 +136,7 @@ public class RequestManager {
     }
     
     // Get new request. Wait until waitingTime is over or until a new request arrives
-    public static RequestData popRequest(int waitingTime) throws InterruptedException {
+    public RequestData popRequest(int waitingTime) throws InterruptedException {
         requestQueueLock.lock();
         try {
             long timeStart = System.currentTimeMillis();
@@ -134,7 +158,7 @@ public class RequestManager {
     }
 
     
-    public static void registerResponse(ResponseData responseData) {
+    public void registerResponse(ResponseData responseData) {
         int requestId = responseData.getRequestId();
         Lock responseLock = responseLocks.get(requestId);
         responseLock.lock();
@@ -145,5 +169,10 @@ public class RequestManager {
         } finally {
             responseLock.unlock();
         }
+    }    
+    
+    // Removes data for timed out requests
+    public void cleanUp() {
+        // loop through requestqueue and responses and remove old requests
     }
 }

@@ -12,6 +12,8 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class ResponseServlet extends HttpServlet {
 
+    private final RequestManager requestManager = RequestManager.getInstance();
+    
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -19,7 +21,7 @@ public class ResponseServlet extends HttpServlet {
         String requestBody = RequestData.extractBody(request);
         Gson gson = new Gson();
         ResponseData responseData = gson.fromJson(requestBody, ResponseData.class);
-        RequestManager.registerResponse(responseData);
+        requestManager.registerResponse(responseData);
     }
 
 

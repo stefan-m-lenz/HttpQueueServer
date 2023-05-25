@@ -19,14 +19,21 @@ import java.util.logging.Logger;
 @WebServlet(name = "RequestRelayServlet", urlPatterns = {"/relay"})
 public class RequestRelayServlet extends HttpServlet {
 
+    private final RequestManager requestManager = RequestManager.getInstance();
+    
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         
         try {
-            RequestManager.relayRequest(request, response);
+            requestManager.relayRequest(request, response);
         } catch (InterruptedException ex) {
             Logger.getLogger(RequestRelayServlet.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    
+    @Override
+    public void destroy() {
+        // TODO stop clean-up task
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
