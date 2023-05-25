@@ -67,30 +67,33 @@ public class RequestManager {
         
         queueRequest(request, requestId);
         
-        waitForResponse(requestId);
-        
-        ResponseData responseData = responses.get(requestId);
-        responses.remove(requestId);
+        // TODO catch timeout
+        ResponseData responseData = waitForResponse(requestId);
 
         writeResponse(response, responseData);
     }
     
-    private static void waitForResponse(int requestId) throws InterruptedException {
+    private static ResponseData waitForResponse(int requestId) throws InterruptedException {
         ReentrantLock lock = new ReentrantLock();
         responseLocks.put(requestId, lock);
         lock.lock();
         try {
             Condition responseArrived = lock.newCondition();
             responseConditions.put(requestId, responseArrived);
+            
+            // TODO timeout
             while (responses.get(requestId) == null) {
                 responseArrived.await();
             }
             
-        } finally {
+            return responses.get(requestId);
+        } finally {           
             lock.unlock();
+            
+            responses.remove(requestId);
+            responseLocks.remove(requestId);
+            responseConditions.remove(requestId);
         }
-        responseLocks.remove(requestId);
-        responseConditions.remove(requestId);
     }
     
     private static void writeResponse(HttpServletResponse response, ResponseData responseData) throws IOException {
