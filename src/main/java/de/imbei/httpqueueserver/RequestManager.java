@@ -52,8 +52,7 @@ public class RequestManager {
     private final Lock requestTimesLock = new ReentrantLock();
     
     private ScheduledExecutorService cleanUpTaskExecutor;
-    //private long timeoutMillis = 172800000; // 2 Days
-    private long timeoutMillis = 3000; // 2 Days //TODO
+    private long timeoutMillis = 172800000; // 2 Days
     
     // This class follows the singleton pattern.
     private static volatile RequestManager instance;
@@ -122,7 +121,6 @@ public class RequestManager {
             Condition responseArrived = lock.newCondition();
             responseConditions.put(requestId, responseArrived);
             
-            // TODO timeout
             while (responses.get(requestId) == null) {
                 responseArrived.await();
             }
@@ -140,15 +138,6 @@ public class RequestManager {
             // any more.
             removeRequestTime(requestId);
         }
-    }
-    
-    private Long getRequestTime(Integer requestId) {
-        requestTimesLock.lock();
-        try {
-            return requestTimes.get(requestId);
-        } finally {
-            requestTimesLock.unlock();
-        }        
     }
     
     private void removeRequestTime(Integer requestId) {
@@ -230,10 +219,13 @@ public class RequestManager {
         for (Integer requestId : expiredRequests) {
             if (responses.get(requestId) != null) {
                 // If a response has been registered for the requestId
-                // but no thread has fetched it, 
-                // clean up the response object and the corresponding locks.
-                // (The object can't be in the queue any more because the
-                // response has been registered. No need to remove it there.)
+                // but no thread has fetched it, clean up:
+                // * the response object, 
+                // * the corresponding lock + condition
+                // * and the registered request time.
+                // There is no need to remove the request from the queue because 
+                // the response has been registered, which means the request must
+                // have been fetched/removed from the queue.)
                 responses.remove(requestId);
                 responseLocks.remove(requestId);
                 responseConditions.remove(requestId);
@@ -249,8 +241,9 @@ public class RequestManager {
                     // To make the timeout visible to a client that may still be waiting,
                     // register a timeout response.
                     registerResponse(ResponseData.createTimeoutResponse(requestId));
-                    // (If this response is not fetched, it will be cleaned up 
-                    // when the clean-up task runs for the next time.)
+                    // (If the timeout response is not fetched, it will be 
+                    // cleaned up when the clean-up task runs for the next time
+                    // as the requestTimes entry is kept for the requestId.)
                 }
             }
         }
@@ -303,10 +296,11 @@ public class RequestManager {
         if (timeoutMillis != null) {
             this.timeoutMillis = timeoutMillis;
         } else {
-            Logger.getLogger(this.getClass().getName()).log(Level.WARNING, 
-                    "Using default value for clean up interval of " + this.timeoutMillis);
+            Logger.getLogger(this.getClass().getName()).log(Level.WARNING,
+                    "Using default value for clean up interval of {0}", 
+                    this.timeoutMillis);
         }
-        cleanUpTaskExecutor = Executors.newScheduledThreadPool(1);
+        cleanUpTaskExecutor = Executors.newSingleThreadScheduledExecutor();
        
         // Run the clean up task after the timeout interval
         cleanUpTaskExecutor.scheduleAtFixedRate(this::cleanUp, 
