@@ -3,6 +3,11 @@
     <servlet>
         <servlet-name>RequestRelayServlet</servlet-name>
         <servlet-class>de.imbei.httpqueueserver.RequestRelayServlet</servlet-class>
+        <init-param>
+            <param-name>requestProcessingTimeoutMillis</param-name>
+            <param-value>20000</param-value>
+            <!--<param-value>172800000</param-value>-->
+        </init-param>
     </servlet>
     <servlet-mapping>
         <servlet-name>RequestRelayServlet</servlet-name>

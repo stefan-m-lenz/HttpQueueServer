@@ -8,6 +8,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.servlet.ServletConfig;
 
 /**
  * Relayss requests to the target server.
@@ -21,6 +22,23 @@ public class RequestRelayServlet extends HttpServlet {
 
     private final RequestManager requestManager = RequestManager.getInstance();
     
+    @Override
+    public void init(ServletConfig config) throws ServletException {
+        super.init(config);
+        
+        String timeoutMillisStr = config.getInitParameter("requestProcessingTimeoutMillis");
+        Long timeoutMillis;
+        try {
+            timeoutMillis = Long.valueOf(timeoutMillisStr);
+        } catch (NumberFormatException ex) {
+            timeoutMillis = null;
+            Logger.getLogger(this.getClass().getName()).log(Level.WARNING, 
+                    "Servlet \"requestProcessingTimeoutMillis\" not set. Using default value");
+        }
+        
+        requestManager.startCleanUpTask(timeoutMillis);
+    }
+    
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         
@@ -33,7 +51,7 @@ public class RequestRelayServlet extends HttpServlet {
     
     @Override
     public void destroy() {
-        // TODO stop clean-up task
+        requestManager.stopCleanUpTask();
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">

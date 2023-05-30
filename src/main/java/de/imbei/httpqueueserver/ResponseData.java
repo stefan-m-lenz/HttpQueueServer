@@ -4,6 +4,7 @@
  */
 package de.imbei.httpqueueserver;
 
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -17,14 +18,15 @@ public class ResponseData {
     private int requestId;
     private int statusCode;
     private Map<String, List<String>> headers;
-    private String body;
+    private String body; // Base64 encoded content
     
     public static ResponseData createTimeoutResponse(int requestId) {
         ResponseData timeoutResponse = new ResponseData();
         timeoutResponse.requestId = requestId;
         timeoutResponse.statusCode = 504; // Gateway timeout
+        timeoutResponse.setBody(Base64.getEncoder()
+                .encodeToString("Timeout while processing request via polling.".getBytes()));
         timeoutResponse.headers = new HashMap<>();
-        timeoutResponse.setBody("Timeout while processing request via polling.");
         timeoutResponse.headers
                 .put("Content-Type", Collections.singletonList("text/plain; charset=UTF-8"));
         return timeoutResponse;

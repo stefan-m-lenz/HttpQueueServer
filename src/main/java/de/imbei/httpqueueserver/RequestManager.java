@@ -4,12 +4,15 @@ import java.util.LinkedList;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -48,8 +51,10 @@ public class RequestManager {
     // make requestTimes thread safe
     private final Lock requestTimesLock = new ReentrantLock();
     
-    private long timeoutMillis = 2000; // TODO make configurable, sensible value
-
+    private ScheduledExecutorService cleanUpTaskExecutor;
+    //private long timeoutMillis = 172800000; // 2 Days
+    private long timeoutMillis = 3000; // 2 Days //TODO
+    
     // This class follows the singleton pattern.
     private static volatile RequestManager instance;
     
@@ -104,7 +109,6 @@ public class RequestManager {
         
         queueRequest(request, requestId);
         
-        // TODO catch timeout
         ResponseData responseData = waitForResponse(requestId);
 
         writeResponse(response, responseData);
@@ -175,11 +179,11 @@ public class RequestManager {
     public RequestData popRequest(int waitingTime) throws InterruptedException {
         requestQueueLock.lock();
         try {
-            long timeStart = System.currentTimeMillis();
+            long timeStart = System.nanoTime();
             while (requestQueue.isEmpty()) {
                 requestArrived.await(waitingTime, TimeUnit.SECONDS);
-                long elapsedMillis = System.currentTimeMillis() - timeStart;
-                if (elapsedMillis > waitingTime * 1000) {
+                long elapsedNanos = System.nanoTime() - timeStart;
+                if (elapsedNanos > waitingTime * 1000000000 ) {
                     break;
                 }
             }
@@ -197,27 +201,32 @@ public class RequestManager {
     public void registerResponse(ResponseData responseData) {
         int requestId = responseData.getRequestId();
         Lock responseLock = responseLocks.get(requestId);
-        responseLock.lock();
-        try {
-            // If there is a responseTimes object for this request,
-            // this means, that a thread is still waiting for the reponse.
+            
+        if (responseLock != null) {
+            // If there is a responseLock object for this request,
+            // a thread is still waiting for the reponse.
             // Register the response and wake up the thread that waits for it.
-            if (getRequestTime(requestId) != null) {
+        
+            responseLock.lock();
+            try {
                 responseConditions.get(requestId).signal();
                 responses.put(requestId, responseData);
+            } finally {
+                responseLock.unlock();
             }
-            // Otherwise, the request has already been cleaned up due to a timeout
-            // and no one is waiting for it. Do nothing and discard the response.
-        } finally {
-            responseLock.unlock();
         }
+        // Otherwise, the request has already been cleaned up due to a timeout
+        // and no one is waiting for it. Do nothing and discard the response.
     }
     
     
     // Clean up requests, responses and corresponding objects 
     // for timed out requests
-    public void cleanUp() {
+    private void cleanUp() {
+        Logger.getLogger(this.getClass().getName()).log(Level.INFO, "Executing clean-up task");
+        
         List<Integer> expiredRequests = getExpiredRequests();
+        Logger.getLogger(this.getClass().getName()).log(Level.INFO, "ExpiredRequests" + Arrays.toString(expiredRequests.toArray()));
         for (Integer requestId : expiredRequests) {
             if (responses.get(requestId) != null) {
                 // If a response has been registered for the requestId
@@ -274,13 +283,37 @@ public class RequestManager {
         long currentTime = System.currentTimeMillis();
         requestTimesLock.lock();
         try {
+            Logger.getLogger(this.getClass().getName()).log(Level.INFO, "requestTimes" + requestTimes.entrySet().stream()
+    .map(entry -> entry.getKey() + " = " + entry.getValue())
+    .collect(Collectors.joining(", ")));
+            
+            Logger.getLogger(this.getClass().getName()).log(Level.INFO, "current time" + currentTime);
+            Logger.getLogger(this.getClass().getName()).log(Level.INFO, "timeoutMillis" + timeoutMillis);
             List<Integer> expiredRequests = requestTimes.entrySet().stream()
-                    .filter(e -> e.getValue() + timeoutMillis > currentTime)
+                    .filter(e -> e.getValue() + timeoutMillis < currentTime)
                     .map(Entry::getKey) // collect request IDs
                     .collect(Collectors.toList());
             return expiredRequests;
         } finally {
             requestTimesLock.unlock();
         }
+    }
+    
+    public void startCleanUpTask(Long timeoutMillis) {
+        if (timeoutMillis != null) {
+            this.timeoutMillis = timeoutMillis;
+        } else {
+            Logger.getLogger(this.getClass().getName()).log(Level.WARNING, 
+                    "Using default value for clean up interval of " + this.timeoutMillis);
+        }
+        cleanUpTaskExecutor = Executors.newScheduledThreadPool(1);
+       
+        // Run the clean up task after the timeout interval
+        cleanUpTaskExecutor.scheduleAtFixedRate(this::cleanUp, 
+                timeoutMillis, timeoutMillis, TimeUnit.MILLISECONDS);
+    }    
+    
+    public void stopCleanUpTask() {
+        cleanUpTaskExecutor.shutdown();
     }
 }
