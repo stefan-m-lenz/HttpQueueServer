@@ -14,6 +14,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * Manages the request queue and the incoming responses.
@@ -40,12 +43,14 @@ public class RequestManager {
     // This way, a clean-up task can remove requests that have timed out,
     // as well as corresponding responses that may never be fetched
     // because the request has timed out already.
-    private final LinkedList<RequestTime> requestTimes = new LinkedList<>();
+    private final Map<Integer, Long> requestTimes = new HashMap<>();
     
     // make requestTimes thread safe
     private final Lock requestTimesLock = new ReentrantLock();
+    
+    private long timeoutMillis = 2000; // TODO make configurable, sensible value
 
-    // This class follows the singleton pattern
+    // This class follows the singleton pattern.
     private static volatile RequestManager instance;
     
     private RequestManager() {}
@@ -63,6 +68,14 @@ public class RequestManager {
 
     
     private void queueRequest(HttpServletRequest request, int requestId) {
+        // Register the request time before adding it to the queue.
+        requestTimesLock.lock();
+        try {
+            requestTimes.put(requestId, System.currentTimeMillis());
+        } finally {
+            requestTimesLock.unlock();
+        }
+        
         requestQueueLock.lock();
         try {
             requestQueue.add(new RequestData(request, requestId));
@@ -117,7 +130,30 @@ public class RequestManager {
             responses.remove(requestId);
             responseLocks.remove(requestId);
             responseConditions.remove(requestId);
+            
+            // After removing the response, the requestTimes object can
+            // also be removed, because the request does not have to be tracked 
+            // any more.
+            removeRequestTime(requestId);
         }
+    }
+    
+    private Long getRequestTime(Integer requestId) {
+        requestTimesLock.lock();
+        try {
+            return requestTimes.get(requestId);
+        } finally {
+            requestTimesLock.unlock();
+        }        
+    }
+    
+    private void removeRequestTime(Integer requestId) {
+        requestTimesLock.lock();
+        try {
+            requestTimes.remove(requestId);
+        } finally {
+            requestTimesLock.unlock();
+        }        
     }
     
     private void writeResponse(HttpServletResponse response, ResponseData responseData) throws IOException {
@@ -163,16 +199,88 @@ public class RequestManager {
         Lock responseLock = responseLocks.get(requestId);
         responseLock.lock();
         try {
-            responses.put(requestId, responseData);
-            // wake up thread that waits on response after registering it
-            responseConditions.get(requestId).signal();
+            // If there is a responseTimes object for this request,
+            // this means, that a thread is still waiting for the reponse.
+            // Register the response and wake up the thread that waits for it.
+            if (getRequestTime(requestId) != null) {
+                responseConditions.get(requestId).signal();
+                responses.put(requestId, responseData);
+            }
+            // Otherwise, the request has already been cleaned up due to a timeout
+            // and no one is waiting for it. Do nothing and discard the response.
         } finally {
             responseLock.unlock();
         }
-    }    
+    }
     
-    // Removes data for timed out requests
+    
+    // Clean up requests, responses and corresponding objects 
+    // for timed out requests
     public void cleanUp() {
-        // loop through requestqueue and responses and remove old requests
+        List<Integer> expiredRequests = getExpiredRequests();
+        for (Integer requestId : expiredRequests) {
+            if (responses.get(requestId) != null) {
+                // If a response has been registered for the requestId
+                // but no thread has fetched it, 
+                // clean up the response object and the corresponding locks.
+                // (The object can't be in the queue any more because the
+                // response has been registered. No need to remove it there.)
+                responses.remove(requestId);
+                responseLocks.remove(requestId);
+                responseConditions.remove(requestId);
+                removeFromRequestTimes(requestId);
+            } else {
+                // If the timeout is due to the fact that the request has not been
+                // fetched from the queue, remove the request from the queue.
+                if (!removeRequestFromQueue(requestId)) {
+                    // If it's not in the queue, 
+                    // and there is no response object registered, 
+                    // we have a timeout of the request. However, it is possible
+                    // that the client is still waiting for the request.
+                    // To make the timeout visible to a client that may still be waiting,
+                    // register a timeout response.
+                    registerResponse(ResponseData.createTimeoutResponse(requestId));
+                    // (If this response is not fetched, it will be cleaned up 
+                    // when the clean-up task runs for the next time.)
+                }
+            }
+        }
+    }
+    
+    // Removes a request from the queue and returns true if the request was 
+    // in the queue before removing it.
+    private boolean removeRequestFromQueue(int requestId) {
+        requestQueueLock.lock();
+        try {
+            return requestQueue.removeIf(request -> request.getRequestId() == requestId);
+        } finally {
+            requestQueueLock.unlock();
+        }
+    }
+    
+    // Removes a requestTimes entry for a given request ID
+    private void removeFromRequestTimes(int requestId) {
+        requestTimesLock.lock();
+        try {
+            requestTimes.remove(requestId);
+        } finally {
+            requestTimesLock.unlock();
+        }
+    }
+       
+    // Find all expired requests in the requestTimes.
+    // Returns a list of their request IDs
+    private List<Integer> getExpiredRequests() {
+        long currentTime = System.currentTimeMillis();
+        requestTimesLock.lock();
+        try {
+            List<Integer> expiredRequests = requestTimes.entrySet().stream()
+                    .filter(e -> e.getValue() + timeoutMillis > currentTime)
+                    .map(Entry::getKey) // collect request IDs
+                    .collect(Collectors.toList());
+            return expiredRequests;
+        } finally {
+            requestTimesLock.unlock();
+        }
     }
 }

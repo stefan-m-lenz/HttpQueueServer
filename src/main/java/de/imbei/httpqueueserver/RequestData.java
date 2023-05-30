@@ -103,6 +103,10 @@ public class RequestData {
         this.body = extractBody(request);
     }
 
+    public int getRequestId() {
+        return requestId;
+    }
+
     @Override
     public String toString() {
         Gson gson = new GsonBuilder().disableHtmlEscaping().create();
