@@ -26,14 +26,19 @@ public class RequestRelayServlet extends HttpServlet {
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         
-        String timeoutMillisStr = config.getInitParameter("requestProcessingTimeoutMillis");
+        String timeoutSecondsStr = config.getInitParameter("requestProcessingTimeoutSeconds");
         Long timeoutMillis;
-        try {
-            timeoutMillis = Long.valueOf(timeoutMillisStr);
-        } catch (NumberFormatException ex) {
+        if (timeoutSecondsStr != null) {
+            try {
+                timeoutMillis = Long.valueOf(timeoutSecondsStr) * 1000;
+            } catch (NumberFormatException ex) {
+                timeoutMillis = null;
+                Logger.getLogger(this.getClass().getName()).log(Level.WARNING, 
+                        "Could not parse value of \"{0}\" for parameter \"requestProcessingTimeoutSeconds\". Using default value", 
+                        timeoutSecondsStr);
+            }
+        } else {
             timeoutMillis = null;
-            Logger.getLogger(this.getClass().getName()).log(Level.WARNING, 
-                    "Servlet \"requestProcessingTimeoutMillis\" not set. Using default value");
         }
         
         requestManager.startCleanUpTask(timeoutMillis);

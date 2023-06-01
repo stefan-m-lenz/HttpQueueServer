@@ -4,7 +4,6 @@ import java.util.LinkedList;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
@@ -149,9 +148,9 @@ public class RequestManager {
         }        
     }
     
-    private void writeResponse(HttpServletResponse response, ResponseData responseData) throws IOException {
+    private void writeResponse(HttpServletResponse response, ResponseData responseData) throws IOException {      
         response.setStatus(responseData.getStatusCode());
-        
+
         // set headers
         for (Entry<String, List<String>> kv: responseData.getHeaders().entrySet()) {
             for (String value : kv.getValue()) {
@@ -171,6 +170,8 @@ public class RequestManager {
             long timeStart = System.nanoTime();
             while (requestQueue.isEmpty()) {
                 requestArrived.await(waitingTime, TimeUnit.SECONDS);
+                // There may be spurious wakeups.
+                // Check if the waiting time has actually passed.
                 long elapsedNanos = System.nanoTime() - timeStart;
                 if (elapsedNanos > waitingTime * 1000000000 ) {
                     break;
@@ -212,10 +213,7 @@ public class RequestManager {
     // Clean up requests, responses and corresponding objects 
     // for timed out requests
     private void cleanUp() {
-        Logger.getLogger(this.getClass().getName()).log(Level.INFO, "Executing clean-up task");
-        
         List<Integer> expiredRequests = getExpiredRequests();
-        Logger.getLogger(this.getClass().getName()).log(Level.INFO, "ExpiredRequests" + Arrays.toString(expiredRequests.toArray()));
         for (Integer requestId : expiredRequests) {
             if (responses.get(requestId) != null) {
                 // If a response has been registered for the requestId
@@ -223,7 +221,7 @@ public class RequestManager {
                 // * the response object, 
                 // * the corresponding lock + condition
                 // * and the registered request time.
-                // There is no need to remove the request from the queue because 
+                // (There is no need to remove the request from the queue because 
                 // the response has been registered, which means the request must
                 // have been fetched/removed from the queue.)
                 responses.remove(requestId);
@@ -276,12 +274,6 @@ public class RequestManager {
         long currentTime = System.currentTimeMillis();
         requestTimesLock.lock();
         try {
-            Logger.getLogger(this.getClass().getName()).log(Level.INFO, "requestTimes" + requestTimes.entrySet().stream()
-    .map(entry -> entry.getKey() + " = " + entry.getValue())
-    .collect(Collectors.joining(", ")));
-            
-            Logger.getLogger(this.getClass().getName()).log(Level.INFO, "current time" + currentTime);
-            Logger.getLogger(this.getClass().getName()).log(Level.INFO, "timeoutMillis" + timeoutMillis);
             List<Integer> expiredRequests = requestTimes.entrySet().stream()
                     .filter(e -> e.getValue() + timeoutMillis < currentTime)
                     .map(Entry::getKey) // collect request IDs
@@ -296,15 +288,15 @@ public class RequestManager {
         if (timeoutMillis != null) {
             this.timeoutMillis = timeoutMillis;
         } else {
-            Logger.getLogger(this.getClass().getName()).log(Level.WARNING,
-                    "Using default value for clean up interval of {0}", 
+            Logger.getLogger(this.getClass().getName()).log(Level.INFO,
+                    "Using default value for clean up interval of {0} ms", 
                     this.timeoutMillis);
         }
         cleanUpTaskExecutor = Executors.newSingleThreadScheduledExecutor();
        
         // Run the clean up task after the timeout interval
         cleanUpTaskExecutor.scheduleAtFixedRate(this::cleanUp, 
-                timeoutMillis, timeoutMillis, TimeUnit.MILLISECONDS);
+                this.timeoutMillis, this.timeoutMillis, TimeUnit.MILLISECONDS);
     }    
     
     public void stopCleanUpTask() {
