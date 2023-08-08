@@ -26,7 +26,7 @@ sudo systemctl start tomcat9
 sudo systemctl enable tomcat9
 
 # Download the HttpQueueServer web archive file and deploy it on Tomcat
-wget https://github.com/stefan-m-lenz/HttpQueueServer/releases/download/v1.0.1/HttpQueueServer.war
+wget https://github.com/stefan-m-lenz/HttpQueueServer/releases/download/v1.1.0/HttpQueueServer.war
 sudo mv HttpQueueServer.war /var/lib/tomcat9/webapps
 ```
 
@@ -34,9 +34,42 @@ Ater the deployment of the `HttpQueueServer` on Tomcat, the server is running an
 Opening this URL in the browser shows a short information about the server.
 The endpoints `/relay`, `/pop-request` and `/response` are available via http://localhost:8080/HttpQueueServer/relay, http://localhost:8080/HttpQueueServer/pop-request and http://localhost:8080/HttpQueueServer/response.
 
-For a use in production, it is necessary to install and configure a reverse proxy.
+## Configuration (optional)
+
+Requests that are not answered via the polling module or retrieved by the client in a certain time can be removed from the `HttpQueueServer`.
+Such incomplete exchanges may occur if the connection to the client or to the target server is disrupted.
+A clean up task running periodically in the background removes the data associated with expired requests.
+The time until the data can be removed can specified via the init parameter `requestProcessingTimeoutSeconds` in the `web.xml` file of the server application.
+
+With tomcat9 on Ubuntu the `web.xml` file can be edited to configure this variable. The file can be opened e.g. via `vi`:
+
+```bash
+sudo vi /var/lib/tomcat9/webapps/HttpQueueServer/WEB-INF/web.xml
+```
+
+The value depends on the maximum amount of time that a request to the target application may take.
+If the default value of two days is not suitable for the application, the `<param-value>` can be changed in the `web.xml`, and, e.g., set to 3 minutes:
+
+```xml
+    <servlet>
+        <servlet-name>RequestRelayServlet</servlet-name>
+        <servlet-class>de.imbei.httpqueueserver.RequestRelayServlet</servlet-class>
+        <init-param>
+            <param-name>requestProcessingTimeoutSeconds</param-name>
+            <param-value>180</param-value>
+        </init-param>
+    </servlet>
+```
+
+After changing the `web.xml`, Tomcat can be restarted to reload the application, thereby applying the changes in the configuration:
+
+```bash
+sudo systemctl restart tomcat9
+```
 
 ## Install and configure *Nginx* as reverse proxy
+For a use in production, it is necessary to install and configure a reverse proxy.
+This section details how Nginx can be used as a reverse proxy to deploy the `HttpQueueServer` securely in a production environment.
 Setting up a reverse proxy for the queue server allows to enable communication via HTTPS.
 Secondly, the reverse proxy configuration must ensure that the server endpoints `/pop-request` and `/response` are only accessible by the (server running) the polling module.
 Otherwise, users could potentially intercept other users' requests.
@@ -140,5 +173,5 @@ For a production deployment, a valid certificate should be provided instead.
 
 ## Firewall configuration
 
-If the communication between queue server and polling module works, finally ensure that the firewall blocks access to port 8080 to prevent that the queue can be accessed by users.
+If the communication between queue server and polling module works, finally ensure that the firewall blocks access to port 8080 (the port where the Apache Tomcat server runs) to prevent that the queue can be accessed by users.
 The firewall must allow access to port 443 for all users.
